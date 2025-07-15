@@ -1,36 +1,15 @@
-const assert = require('assert');
+const { ObjectId } = require('mongodb');
 
-exports.insertDocument = (db, document, collection, callback) => {
-    const coll = db.collection(collection);
-    coll.insertOne(document, (err, result) => {  // Changed from insert() to insertOne()
-        assert.equal(err, null);
-        console.log("Inserted document into the collection " + collection);
-        callback(result);
-    });
-};
+module.exports = {
+  insertDocument: (db, document, collection) => {
+    return db.collection(collection).insertOne(document);
+  },
 
-exports.findDocuments = (db, collection, callback) => {  // Fixed typo in function name
-    const coll = db.collection(collection);
-    coll.find({}).toArray((err, docs) => {
-        assert.equal(err, null);
-        callback(docs);
-    });
-};
+  findDocuments: (db, collection) => {
+    return db.collection(collection).find({}).toArray();
+  },
 
-exports.removeDocument = (db, document, collection, callback) => {  // Added missing arrow function syntax
-    const coll = db.collection(collection);
-    coll.deleteOne(document, (err, result) => {
-        assert.equal(err, null);
-        console.log("Removed the document ", document);
-        callback(result);
-    });
-};
-
-exports.updateDocument = (db, document, update, collection, callback) => {
-    const coll = db.collection(collection);
-    coll.updateOne(document, { $set: update }, (err, result) => {  // Removed redundant null parameter
-        assert.equal(err, null);
-        console.log("Updated the document with ", update);
-        callback(result);
-    });
+  updateDocument: (db, filter, update, collection) => {
+    return db.collection(collection).updateOne(filter, { $set: update });
+  }
 };
