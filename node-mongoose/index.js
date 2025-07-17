@@ -2,30 +2,51 @@ const mongoose = require('mongoose');
 const Dishes = require('./models/dishes');
 
 const url = 'mongodb://localhost:27017/conFusion'; 
-const connect = mongoose.connect(url);
 
-connect.then((db) => {
+// Connect to MongoDB
+mongoose.connect(url)
+.then((db) => {
     console.log('Connected correctly to server');
     
-    Dishes.create({
-        name: 'pizza',
+    // Create a new dish
+    return Dishes.create({
+        name: 'Uthappizza',
         description: 'test'
-    })
-        .then((dish) => {
-            console.log(dish);
-            return Dishes.find({}).exec();
-        })
-        .then((dishes) => {
-            console.log(dishes);
-            return Dishes.deleteMany({});
-        })
-        .then(() => {
-            return mongoose.connection.close();
-        })
-        .catch((err) => {
-            console.log(err);
-        });
+    });
+})
+.then((dish) => {
+    console.log(dish);
+
+    // Update the dish's description
+    return Dishes.findByIdAndUpdate(
+        dish._id, 
+        { $set: { description: 'Updated test' } },
+        { new: true }  // Return the updated document
+    ).exec();
+})
+.then((dish) => {
+    console.log(dish);
+
+    // Add a comment to the dish
+    dish.comments.push({
+        rating: 5,
+        comment: 'I\'m getting a sinking feeling!',
+        author: 'Leonardo di Carpaccio'
+    });
+
+    // Save the dish with new comment
+    return dish.save();
+})
+.then((dish) => {
+    console.log(dish);
+
+    // Delete all dishes (cleanup)
+    return Dishes.deleteMany({});
+})
+.then(() => {
+    // Close the connection
+    return mongoose.connection.close();
 })
 .catch((err) => {
-    console.log('Connection error:', err);
+    console.log('Error:', err);
 });
