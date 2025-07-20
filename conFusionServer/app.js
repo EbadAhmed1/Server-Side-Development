@@ -10,6 +10,19 @@ var dishRouter = require('./routes/dishRouter');
 var promoRouter = require('./routes/promoRouter');
 var leaderRouter = require('./routes/leaderRouter');
 
+const mongoose = require('mongoose');
+const url = 'mongodb://localhost:27017/conFusion';
+
+// Connect to MongoDB before starting the server
+mongoose.connect(url)
+  .then(() => {
+    console.log('Connected successfully to MongoDB server');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
 var app = express();
 
 // view engine setup
@@ -35,11 +48,8 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
   res.render('error');
 });
