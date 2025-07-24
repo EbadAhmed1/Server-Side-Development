@@ -13,7 +13,7 @@ var leaderRouter = require('./routes/leaderRouter');
 const mongoose = require('mongoose');
 const url = 'mongodb://localhost:27017/conFusion';
 
-// Connect to MongoDB before starting the server
+// Connect to MongoDB
 mongoose.connect(url)
   .then(() => {
     console.log('Connected successfully to MongoDB server');
@@ -32,47 +32,56 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('12345-67890-09876-54321')); // Secret for signed cookies
+app.use(express.static(path.join(__dirname, 'public')));
 
-function auth(req,res,next) {
-  console.log(req.headers);
+// Authentication middleware
+function auth(req, res, next) {
+  console.log(req.signedCookies);
 
-  var authHeader = req.headers.authorization;
+  if (!req.signedCookies.user) {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');
+      err.status = 401;
+      return next(err);
+    }
 
-  if (!authHeader) {
-    var err = new Error('You are not authenticated!');
+    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const username = auth[0];
+    const password = auth[1];
 
-    res.setHeader('WWW-Authenticate','Basic');
-    err.status = 401;
-    return next(err)
-  }
-
-  var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
-
-  var username = auth[0];
-  var password = auth[1];
-
-  if(username == 'admin' && password == 'password') {
-    next();
-  }
-  else {
-    var err = new Error('You are not authenticated!');
-
-    res.setHeader('WWW-Authenticate','Basic');
-    err.status = 401;
-    return next(err)
+    if (username === 'admin' && password === 'password') {
+      res.cookie('user', 'admin', { signed: true, httpOnly: true });
+      return next();
+    } else {
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');
+      err.status = 401;
+      return next(err);
+    }
+  } else {
+    if (req.signedCookies.user === 'admin') {
+      return next();
+    } else {
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');
+      err.status = 401;
+      return next(err);
+    }
   }
 }
 
-app.use(auth);
+// Apply authentication to protected routes only
+app.use('/dishes', auth, dishRouter);
+app.use('/promotions', auth, promoRouter);
+app.use('/leaders', auth, leaderRouter);
 
-app.use(express.static(path.join(__dirname, 'public')));
-
+// Public routes
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/dishes', dishRouter);
-app.use('/promotions', promoRouter);
-app.use('/leaders', leaderRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
